@@ -108,7 +108,7 @@ func (d *DNSServer) Start() {
 			respMsg.Response = true
 
 			if qtype != dns.TypeNS {
-				respMsg.Ns = append(respMsg.Ns, authority)
+				respMsg.Ns = append(respMsg.Ns, authority, zsk.SignRR(&authority))
 				ips := amgr.GoodAddresses(qtype, wantedSF)
 				for _, ip := range ips {
 					rr = fmt.Sprintf("%s 30 IN %s %s",
