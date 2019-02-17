@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/decred/dcrseeder/dnssec"
 	"log"
 	"net"
 	"strconv"
@@ -85,30 +86,15 @@ func (d *DNSServer) Start() {
 				wantedSF = wire.ServiceFlag(u)
 			}
 
-			var atype string
-			qtype := dnsMsg.Question[0].Qtype
-			switch qtype {
-			case dns.TypeA:
-				atype = "A"
-			case dns.TypeAAAA:
-				atype = "AAAA"
-			case dns.TypeNS:
-				atype = "NS"
-			default:
-				log.Printf("%s: invalid qtype: %d", addr,
-					dnsMsg.Question[0].Qtype)
-				return
-			}
-
-			log.Printf("%s: query %d for %v", addr,
-				dnsMsg.Question[0].Qtype, wantedSF)
-
 			respMsg := dnsMsg.Copy()
 			respMsg.Authoritative = true
 			respMsg.Response = true
 
-			if qtype != dns.TypeNS {
-				respMsg.Ns = append(respMsg.Ns, authority, zsk.SignRR(&authority))
+			log.Printf("%s: query %d for %v", addr,
+				dnsMsg.Question[0].Qtype, wantedSF)
+
+			aResponse := func(qtype uint16, atype string) {
+				respMsg.Ns = append(respMsg.Ns, authority, dnssec.SignRR([]dns.RR{authority}))
 				ips := amgr.GoodAddresses(qtype, wantedSF)
 				for _, ip := range ips {
 					rr = fmt.Sprintf("%s 30 IN %s %s",
@@ -121,10 +107,23 @@ func (d *DNSServer) Start() {
 						return
 					}
 
-					respMsg.Answer = append(respMsg.Answer,
-						newRR)
+					respMsg.Answer = append(respMsg.Answer, newRR)
 				}
-			} else {
+			}
+
+			var atype string
+			qtype := dnsMsg.Question[0].Qtype
+			switch qtype {
+			case dns.TypeA:
+				atype = "A"
+				aResponse(qtype, atype)
+
+			case dns.TypeAAAA:
+				atype = "AAAA"
+				aResponse(qtype, atype)
+
+			case dns.TypeNS:
+				atype = "NS"
 				rr = fmt.Sprintf("%s 86400 IN NS %s",
 					dnsMsg.Question[0].Name, d.nameserver)
 				newRR, err := dns.NewRR(rr)
@@ -132,8 +131,16 @@ func (d *DNSServer) Start() {
 					log.Printf("%s: NewRR: %v", addr, err)
 					return
 				}
-
 				respMsg.Answer = append(respMsg.Answer, newRR)
+
+			case dns.TypeDNSKEY:
+				atype = "DNSKEY"
+				rrSet := dnssec.GetDNSKEY()
+				respMsg.Answer = append(respMsg.Answer, rrSet[0], rrSet[1], dnssec.SignRR(rrSet))
+
+			default:
+				log.Printf("%s: invalid qtype: %d", addr, dnsMsg.Question[0].Qtype)
+				return
 			}
 
 			//done:
