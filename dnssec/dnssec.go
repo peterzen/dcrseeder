@@ -28,7 +28,7 @@ Exponent1: Wefi/7g+mIML+vHo/9z4mAlXRhNusbfBeq3yQCU6DEgnSXzUelYlrQMDvwU2C36CPfpIg
 Exponent2: CD4XVcfaYL8WEONHNpL9j85lHiWLrA8HXyd6al8JBJQBxyqFyaadydVJffuU/kmSpLjDopx5jfoZyKpl1TPBQQ==
 Coefficient: nNpvU/xGtG0cmJDuS/A6ult7chDRUnDiFAdwokPUhupJW04i1zjF+H5aFdCEm80nMgR58fw06dxM9EHqvcQFUw==
 `
-var zskPubStr = "stakey.org.	IN	DNSKEY	256 3 10 AwEAAZn/tSW46+aotoPFtOHQhKpca06HUAYV/XFhyBE6cv7DhsIHxCJdpqAIUlhdscGQxgM4o8JKR+2d7yShcRNbDDLRfxSYITdYt3jAIn//hQt1QLQtQMeI2tN9+nFVp6vsrj5VykBRSM+f5KpdnXApMI2qDsrIG4cgOYikKzazrFEt"
+var zskPubStr = "stakey.org.	14400 IN	DNSKEY	256 3 10 AwEAAZn/tSW46+aotoPFtOHQhKpca06HUAYV/XFhyBE6cv7DhsIHxCJdpqAIUlhdscGQxgM4o8JKR+2d7yShcRNbDDLRfxSYITdYt3jAIn//hQt1QLQtQMeI2tN9+nFVp6vsrj5VykBRSM+f5KpdnXApMI2qDsrIG4cgOYikKzazrFEt"
 
 var kskPrivStr = `Private-key-format: v1.2
 Algorithm: 10 (RSASHA512)
@@ -42,7 +42,7 @@ Exponent2: gXPYfAN/hvA+zJ+6Lp/zX7GnZ/eKII8tquMyIlyJfd2/ssKOCs+Uq3J3/SJyH+gTX1S0J
 Coefficient: BZtSnAn8xu0YHIe1Mw95vhD62eC9fKzyeW4UNCzCQQ5oYKcO58DXb8QTSbBAtfaE5pIO1elDKi7/EjeYJZsg/w==
 `
 
-var kskPubStr = "stakey.org.	IN	DNSKEY	257 3 10 AwEAAcYA3cVGMpyQmqF55fwmEsgy4++Y8pRR6Z8RAJkTiNdUtT6VPkPTH0YxWqRNX8oobeYeiZqtPNjwkEOvKoLbVoAZZTPZVKHu79FTC2ePBMy26ZDdEILhHtj1Wi5RTDLXMJiUkzmkPfwSzQq2AjMGlD36ffbvfs6y5cseR9RKEAvb"
+var kskPubStr = "stakey.org.	14400 IN	DNSKEY	257 3 10 AwEAAcYA3cVGMpyQmqF55fwmEsgy4++Y8pRR6Z8RAJkTiNdUtT6VPkPTH0YxWqRNX8oobeYeiZqtPNjwkEOvKoLbVoAZZTPZVKHu79FTC2ePBMy26ZDdEILhHtj1Wi5RTDLXMJiUkzmkPfwSzQq2AjMGlD36ffbvfs6y5cseR9RKEAvb"
 
 var (
 	zsk  *SigningKey
@@ -115,8 +115,8 @@ func SignRRSet(rrSet []dns.RR) (*dns.RRSIG, error) {
 
 	sig := new(dns.RRSIG)
 	sig.Hdr = dns.RR_Header{zone, dns.TypeRRSIG, dns.ClassINET, 14400, 0}
-	sig.Expiration = 1296534305 // date -u '+%s' -d"2011-02-01 04:25:05"
-	sig.Inception = 1293942305  // date -u '+%s' -d"2011-01-02 04:25:05"
+	sig.Expiration = 1552856746 // date -u '+%s' -d"2011-02-01 04:25:05"
+	sig.Inception = 1550437546  // date -u '+%s' -d"2011-01-02 04:25:05"
 	sig.KeyTag = k.KeyTag()
 	sig.SignerName = k.Hdr.Name
 	sig.Algorithm = k.Algorithm

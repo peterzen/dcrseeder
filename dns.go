@@ -120,6 +120,23 @@ func (d *DNSServer) Start() {
 			var atype string
 			qtype := dnsMsg.Question[0].Qtype
 			switch qtype {
+			case dns.TypeSOA:
+				atype = "SOA"
+				soa := new(dns.SOA)
+				soa.Hdr = dns.RR_Header{"stakey.org.", dns.TypeSOA, dns.ClassINET, 14400, 0}
+				soa.Ns = "ns1.stakey.org."
+				soa.Mbox = "hostmaster.stakey.org."
+				soa.Serial = 1164162633
+				soa.Refresh = 3600
+				soa.Retry = 900
+				soa.Expire = 1209600
+				soa.Minttl = 86400
+				rrSig, err := dnssec.SignRRSet([]dns.RR{soa})
+				if err != nil {
+					return
+				}
+				respMsg.Answer = append(respMsg.Answer, soa, rrSig)
+
 			case dns.TypeA:
 				atype = "A"
 				aResponse(qtype, atype)
