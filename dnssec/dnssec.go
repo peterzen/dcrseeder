@@ -12,6 +12,8 @@ type SigningKey struct {
 	PubKey  *dns.DNSKEY
 }
 
+type Error struct{ err string }
+
 // export KSK=`ldns-keygen -k -a RSASHA512  -b 1024 $DOMAIN`
 // export ZSK=`ldns-keygen -a RSASHA512 -b 1024 $DOMAIN`
 
@@ -47,6 +49,17 @@ var (
 	ksk  *SigningKey
 	zone string
 )
+
+var (
+	SignErrEmptyRrset error = &Error{err: "Cannot sign empty RRset"}
+)
+
+func (e *Error) Error() string {
+	if e == nil {
+		return "dnssec: <nil>"
+	}
+	return "dnssec: " + e.err
+}
 
 func loadZsk() (zsk *SigningKey) {
 
@@ -90,8 +103,13 @@ func loadKsk() (zsk *SigningKey) {
 	}
 }
 
-func SignRR(rrSet []dns.RR) (signature *dns.RRSIG) {
+func SignRRSet(rrSet []dns.RR) (*dns.RRSIG, error) {
 
+	// TODO should we raise an error when the RRset is empty,
+	// or just silently get over the fact and return nil
+	if len(rrSet) < 1 {
+		return nil, SignErrEmptyRrset
+	}
 	k := zsk.PubKey
 	p := zsk.PrivKey
 
@@ -106,10 +124,10 @@ func SignRR(rrSet []dns.RR) (signature *dns.RRSIG) {
 	err := sig.Sign((*p).(*rsa.PrivateKey), rrSet)
 
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	return sig
+	return sig, nil
 }
 
 func GetDNSKEY() (rrset []dns.RR) {
