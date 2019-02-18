@@ -82,16 +82,16 @@ func loadZsk() (zsk *SigningKey) {
 	}
 }
 
-func loadKsk() (zsk *SigningKey) {
+func loadKsk() (ksk *SigningKey) {
 
-	pubKey, err := dns.ReadRR(strings.NewReader(zskPubStr), "Kstakey.org.+010+55254.key")
+	pubKey, err := dns.ReadRR(strings.NewReader(kskPubStr), "Kstakey.org.+010+55254.key")
 	if err != nil {
 		return nil
 	}
 
 	k := pubKey.(*dns.DNSKEY)
 
-	privKey, err := k.ReadPrivateKey(strings.NewReader(zskPrivStr),
+	privKey, err := k.ReadPrivateKey(strings.NewReader(kskPrivStr),
 		"Kstakey.org.+010+55254.private")
 	if err != nil {
 		return nil
@@ -105,23 +105,16 @@ func loadKsk() (zsk *SigningKey) {
 
 func SignRRSet(rrSet []dns.RR) (*dns.RRSIG, error) {
 
-	// TODO should we raise an error when the RRset is empty,
+	// TODO should we raise an error if the RRset is empty,
 	// or just silently get over the fact and return nil
 	if len(rrSet) < 1 {
 		return nil, SignErrEmptyRrset
 	}
-	k := zsk.PubKey
-	p := zsk.PrivKey
 
-	sig := new(dns.RRSIG)
-	sig.Hdr = dns.RR_Header{zone, dns.TypeRRSIG, dns.ClassINET, 14400, 0}
-	sig.Expiration = 1552856746 // date -u '+%s' -d"2011-02-01 04:25:05"
-	sig.Inception = 1550437546  // date -u '+%s' -d"2011-01-02 04:25:05"
-	sig.KeyTag = k.KeyTag()
-	sig.SignerName = k.Hdr.Name
-	sig.Algorithm = k.Algorithm
+	p := *zsk.PrivKey
 
-	err := sig.Sign((*p).(*rsa.PrivateKey), rrSet)
+	sig := makeRRSIG(zsk.PubKey)
+	err := sig.Sign(p.(*rsa.PrivateKey), rrSet)
 
 	if err != nil {
 		return nil, err
@@ -130,12 +123,40 @@ func SignRRSet(rrSet []dns.RR) (*dns.RRSIG, error) {
 	return sig, nil
 }
 
-func GetDNSKEY() (rrset []dns.RR) {
+func makeRRSIG(k *dns.DNSKEY) *dns.RRSIG {
+
+	sig := new(dns.RRSIG)
+	sig.Hdr = dns.RR_Header{zone, dns.TypeRRSIG, dns.ClassINET, 14400, 0}
+	sig.Expiration = 1552923667 // date -u '+%s' -d"2011-02-01 04:25:05"
+	sig.Inception = 1550504467  // date -u '+%s' -d"2011-01-02 04:25:05"
+	sig.KeyTag = k.KeyTag()
+	sig.SignerName = k.Hdr.Name
+	sig.Algorithm = k.Algorithm
+	return sig
+}
+
+func getDNSKEY() (rrset []dns.RR) {
 	zsk, _ := dns.NewRR(zskPubStr)
 	// TODO add error handling
 	ksk, _ := dns.NewRR(kskPubStr)
 	// TODO add error handling
 	return []dns.RR{zsk, ksk}
+}
+
+func GetSignedDNSKEY() ([]dns.RR, *dns.RRSIG, error) {
+
+	rrSet := getDNSKEY()
+	pubKey := ksk.PubKey
+	privKey := *ksk.PrivKey
+
+	sig := makeRRSIG(pubKey)
+	err := sig.Sign(privKey.(*rsa.PrivateKey), rrSet)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return rrSet, sig, nil
 }
 
 func Initialize() {

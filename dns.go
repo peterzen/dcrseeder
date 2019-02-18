@@ -162,8 +162,7 @@ func (d *DNSServer) Start() {
 
 			case dns.TypeDNSKEY:
 				atype = "DNSKEY"
-				rrSet := dnssec.GetDNSKEY()
-				rrSig, err := dnssec.SignRRSet(rrSet)
+				rrSet, rrSig, err := dnssec.GetSignedDNSKEY()
 				if err != nil {
 					return
 				}
