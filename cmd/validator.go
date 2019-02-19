@@ -19,7 +19,7 @@ type ChainOfTrust struct {
 	soaRrsig    *dns.RRSIG
 	dnskey      []dns.RR
 	dnskeyRrsig *dns.RRSIG
-	ds          *dns.DS
+	ds          []dns.DS
 	dsRrsig     *dns.RRSIG
 	aaaaRrsig   *dns.RRSIG
 	aRr         []dns.RR
@@ -74,6 +74,12 @@ func main() {
 	hostname := "seed.stakey.org."
 	var err error
 
+	//conf = &dns.ClientConfig{
+	//	Ndots:   1,
+	//	Servers: []string{"localhost"},
+	//	Port:    "5453",
+	//}
+	//conf, err = &dns.ClientConfig{["localhost"], "", "5453", 1, DefaultTimeout, 1, 1)
 	conf, err = dns.ClientConfigFromFile("resolv.conf")
 	if err != nil || conf == nil {
 		fmt.Printf("Cannot initialize the local resolver: %s\n", err)
@@ -148,13 +154,14 @@ func LookupIP(hostname string) (err error) {
 		fmt.Printf("No such domain %s\n", qname)
 		return err
 	}
+	chainOfTrust.ds = make([]dns.DS, 0, len(r.Answer))
 
 	for _, ans := range r.Answer {
 		switch t := ans.(type) {
 		case *dns.RRSIG:
 			chainOfTrust.dsRrsig = t
 		case *dns.DS:
-			chainOfTrust.ds = t
+			chainOfTrust.ds = append(chainOfTrust.ds, *t)
 		}
 	}
 
@@ -271,20 +278,28 @@ func LookupIP(hostname string) (err error) {
 	fmt.Printf("Chain of trust: \n\nSOA %v\n\nRRSIG %v\n", chainOfTrust.soa, chainOfTrust.soaRrsig)
 
 	// Verify the RRSIG of the requested RRset with the public ZSK.
-	err = chainOfTrust.aRrsig.Verify(validationKeys.zsk, chainOfTrust.aRr)
+	if len(chainOfTrust.aRr) > 0 {
+		err = chainOfTrust.aRrsig.Verify(validationKeys.zsk, chainOfTrust.aRr)
 
-	if err != nil {
-		fmt.Printf("validation A: %s\n", err)
-		return err
+		if err != nil {
+			fmt.Printf("validation A: %s\n", err)
+			return err
+		}
 	}
 
-	err = chainOfTrust.aaaaRrsig.Verify(validationKeys.zsk, chainOfTrust.aaaaRr)
+	if len(chainOfTrust.aaaaRr) > 0 {
+		err = chainOfTrust.aaaaRrsig.Verify(validationKeys.zsk, chainOfTrust.aaaaRr)
 
-	if err != nil {
-		fmt.Printf("validation AAAA: %s\n", err)
-		return err
+		if err != nil {
+			fmt.Printf("validation AAAA: %s\n", err)
+			return err
+		}
 	}
 
+	if len(chainOfTrust.dnskey) == 0 {
+		err = &Error{err: "missing validation DNSKEY"}
+		return err
+	}
 	// Verify the RRSIG of the DNSKEY RRset with the public KSK.
 	err = chainOfTrust.dnskeyRrsig.Verify(validationKeys.ksk, chainOfTrust.dnskey)
 
@@ -293,10 +308,12 @@ func LookupIP(hostname string) (err error) {
 		return err
 	}
 
-	// 7218FDF70DA623B1F83C168CBD0807CE36832A579EF479DD47308C5F
+	//if len(chainOfTrust.)
+
+	//7218FDF70DA623B1F83C168CBD0807CE36832A579EF479DD47308C5F
 	ds := strings.ToUpper(validationKeys.ksk.ToDS(dns.SHA256).Digest)
-	parentDs := strings.ToUpper(chainOfTrust.ds.Digest)
-	//fmt.Println(ds)
+	parentDs := strings.ToUpper(chainOfTrust.ds[0].Digest)
+	////fmt.Println(ds)
 	if parentDs != ds {
 		err = &Error{err: "Invalid DS"}
 		return err
