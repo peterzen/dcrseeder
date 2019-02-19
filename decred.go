@@ -34,7 +34,6 @@ var (
 
 func creep() {
 
-	return
 	defer wg.Done()
 
 	onaddr := make(chan struct{})
