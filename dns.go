@@ -94,8 +94,11 @@ func (d *DNSServer) Start() {
 				dnsMsg.Question[0].Qtype, wantedSF)
 
 			aResponse := func(qtype uint16, atype string) {
-				rrSig, err := dnssec.SignRRSet([]dns.RR{authority})
 				respMsg.Ns = append(respMsg.Ns, authority)
+				rrSig, err := dnssec.SignRRSet([]dns.RR{authority})
+				if err == nil {
+					log.Printf("unable to sign %s response", atype)
+				}
 				if rrSig != nil {
 					respMsg.Ns = append(respMsg.Ns, rrSig)
 				}
@@ -112,14 +115,15 @@ func (d *DNSServer) Start() {
 					}
 					respMsg.Answer = append(respMsg.Answer, newRR)
 				}
+
 				if respMsg.Answer != nil {
-					rrSig, err = dnssec.SignRRSet(respMsg.Answer)
+					rrSig, err := dnssec.SignRRSet(respMsg.Answer)
 					if err != nil {
 						log.Printf("%s: SignRRSet: %v", err)
 						return
 					}
+					respMsg.Answer = append(respMsg.Answer, rrSig)
 				}
-				respMsg.Answer = append(respMsg.Answer, rrSig)
 			}
 
 			var atype string
