@@ -67,12 +67,14 @@ func (d *DNSServer) Start() {
 				return
 			}
 			domainName := strings.ToLower(dnsMsg.Question[0].Name)
-			ff := strings.LastIndex(domainName, d.hostname)
-			if ff < 0 {
-				log.Printf("invalid name: %s",
-					dnsMsg.Question[0].Name)
-				return
-			}
+
+			// TODO respond back with proper NXDOMAIN
+			//ff := strings.LastIndex(domainName, d.hostname)
+			//if ff < 0 {
+			//	log.Printf("invalid name: %s",
+			//		dnsMsg.Question[0].Name)
+			//	return
+			//}
 
 			wantedSF := wire.SFNodeNetwork
 			labels := dns.SplitDomainName(domainName)

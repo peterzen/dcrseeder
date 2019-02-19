@@ -71,7 +71,7 @@ func main() {
 
 	ips = make([]string, 0, 100)
 
-	hostname := "seed.stakey.org."
+	hostname := "stakey.org."
 	var err error
 
 	//conf = &dns.ClientConfig{
