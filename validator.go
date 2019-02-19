@@ -15,7 +15,7 @@ const (
 )
 
 type ChainOfTrust struct {
-	soa         *dns.SOA
+	soa         []dns.RR
 	soaRrsig    *dns.RRSIG
 	dnskey      []dns.RR
 	dnskeyRrsig *dns.RRSIG
@@ -94,7 +94,7 @@ func LookupIP(hostname string) (err error) {
 
 	zone := "stakey.org."
 	qname := dns.Fqdn(zone)
-	fmt.Printf("fqdn %s", qname)
+	fmt.Printf("fqdn %s\n", qname)
 
 	// get SOA
 	dnsMessage = &dns.Msg{
@@ -109,7 +109,7 @@ func LookupIP(hostname string) (err error) {
 	}
 	r, err := localQuery(qname, dns.TypeSOA)
 	if err != nil || r == nil {
-		fmt.Printf("Cannot retrieve the list of name servers for %s: %s\n", qname, err)
+		fmt.Printf("Cannot retrieve SOA for %s: %s\n", qname, err)
 		return err
 	}
 	if r.Rcode == dns.RcodeNameError {
@@ -117,12 +117,14 @@ func LookupIP(hostname string) (err error) {
 		return err
 	}
 
+	chainOfTrust.soa = make([]dns.RR, 0, 1)
+
 	for _, ans := range r.Answer {
 		switch t := ans.(type) {
 		case *dns.RRSIG:
 			chainOfTrust.soaRrsig = t
 		case *dns.SOA:
-			chainOfTrust.soa = t
+			chainOfTrust.soa = append(chainOfTrust.soa, t)
 		}
 	}
 
