@@ -120,7 +120,7 @@ func SignRRSet(rrSet []dns.RR) (*dns.RRSIG, error) {
 	// TODO should we raise an error if the RRset is empty,
 	// or just silently get over the fact and return nil
 	if len(rrSet) < 1 {
-		return nil, SignErrEmptyRrset
+		return nil, nil
 	}
 
 	p := *zsk.PrivKey

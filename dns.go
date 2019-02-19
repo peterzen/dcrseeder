@@ -95,7 +95,10 @@ func (d *DNSServer) Start() {
 
 			aResponse := func(qtype uint16, atype string) {
 				rrSig, err := dnssec.SignRRSet([]dns.RR{authority})
-				respMsg.Ns = append(respMsg.Ns, authority, rrSig)
+				respMsg.Ns = append(respMsg.Ns, authority)
+				if rrSig != nil {
+					respMsg.Ns = append(respMsg.Ns, rrSig)
+				}
 				ips := amgr.GoodAddresses(qtype, wantedSF)
 				for _, ip := range ips {
 					rr = fmt.Sprintf("%s 30 IN %s %s",
@@ -109,10 +112,12 @@ func (d *DNSServer) Start() {
 					}
 					respMsg.Answer = append(respMsg.Answer, newRR)
 				}
-				rrSig, err = dnssec.SignRRSet(respMsg.Answer)
-				if err != nil {
-					log.Printf("%s: SignRRSet: %v", err)
-					return
+				if respMsg.Answer != nil {
+					rrSig, err = dnssec.SignRRSet(respMsg.Answer)
+					if err != nil {
+						log.Printf("%s: SignRRSet: %v", err)
+						return
+					}
 				}
 				respMsg.Answer = append(respMsg.Answer, rrSig)
 			}
@@ -167,6 +172,8 @@ func (d *DNSServer) Start() {
 					return
 				}
 				respMsg.Answer = append(respMsg.Answer, rrSet[0], rrSet[1], rrSig)
+
+			case dns.TypeDS:
 
 			default:
 				log.Printf("%s: invalid qtype: %d", addr, dnsMsg.Question[0].Qtype)
