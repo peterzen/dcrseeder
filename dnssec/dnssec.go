@@ -12,8 +12,6 @@ type SigningKey struct {
 	PubKey  *dns.DNSKEY
 }
 
-type Error struct{ err string }
-
 // export KSK=`ldns-keygen -k -a RSASHA512  -b 1024 $DOMAIN`
 // export ZSK=`ldns-keygen -a RSASHA512 -b 1024 $DOMAIN`
 
@@ -53,6 +51,8 @@ var (
 var (
 	SignErrEmptyRrset error = &Error{err: "Cannot sign empty RRset"}
 )
+
+type Error struct{ err string }
 
 func (e *Error) Error() string {
 	if e == nil {
@@ -103,6 +103,18 @@ func loadKsk() (ksk *SigningKey) {
 	}
 }
 
+func makeRRSIG(k *dns.DNSKEY) *dns.RRSIG {
+
+	sig := new(dns.RRSIG)
+	sig.Hdr = dns.RR_Header{zone, dns.TypeRRSIG, dns.ClassINET, 14400, 0}
+	sig.Expiration = 1552923667 // date -u '+%s' -d"2011-02-01 04:25:05"
+	sig.Inception = 1550504467  // date -u '+%s' -d"2011-01-02 04:25:05"
+	sig.KeyTag = k.KeyTag()
+	sig.SignerName = k.Hdr.Name
+	sig.Algorithm = k.Algorithm
+	return sig
+}
+
 func SignRRSet(rrSet []dns.RR) (*dns.RRSIG, error) {
 
 	// TODO should we raise an error if the RRset is empty,
@@ -121,18 +133,6 @@ func SignRRSet(rrSet []dns.RR) (*dns.RRSIG, error) {
 	}
 
 	return sig, nil
-}
-
-func makeRRSIG(k *dns.DNSKEY) *dns.RRSIG {
-
-	sig := new(dns.RRSIG)
-	sig.Hdr = dns.RR_Header{zone, dns.TypeRRSIG, dns.ClassINET, 14400, 0}
-	sig.Expiration = 1552923667 // date -u '+%s' -d"2011-02-01 04:25:05"
-	sig.Inception = 1550504467  // date -u '+%s' -d"2011-01-02 04:25:05"
-	sig.KeyTag = k.KeyTag()
-	sig.SignerName = k.Hdr.Name
-	sig.Algorithm = k.Algorithm
-	return sig
 }
 
 func getDNSKEY() (rrset []dns.RR) {

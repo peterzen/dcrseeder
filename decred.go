@@ -33,6 +33,8 @@ var (
 )
 
 func creep() {
+
+	return
 	defer wg.Done()
 
 	onaddr := make(chan struct{})
@@ -128,7 +130,7 @@ func creep() {
 	}
 }
 
-func main() {
+func _main() {
 	cfg, err := loadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "loadConfig: %v\n", err)
