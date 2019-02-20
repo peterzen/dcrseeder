@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"github.com/miekg/dns"
+	"log"
 	"strings"
 )
 
@@ -17,35 +18,36 @@ type SigningKey struct {
 
 var zskPrivStr = `Private-key-format: v1.2
 Algorithm: 10 (RSASHA512)
-Modulus: mf+1Jbjr5qi2g8W04dCEqlxrTodQBhX9cWHIETpy/sOGwgfEIl2moAhSWF2xwZDGAzijwkpH7Z3vJKFxE1sMMtF/FJghN1i3eMAif/+FC3VAtC1Ax4ja0336cVWnq+yuPlXKQFFIz5/kql2dcCkwjaoOysgbhyA5iKQrNrOsUS0=
+Modulus: 5RXbNyuZTYQOzYPMFbOoPfKZm6EVtMkuiz70xNqdoSc7hHR3hUz2Qu48HeEGNGxW+K25acKjwWQO8I51ofrolWfiuKrR2FcteQgCfVdhI53+YNSAwN4/IM/PMVzaSim+DTO9v5c4feYr5NnvG5vBzVkto7Sv7/4X5msj2hu27fE=
 PublicExponent: AQAB
-PrivateExponent: Dj/K0yK5MS6LNMYmZn6Ux+6lPy7mCKogOU2C5ZUy7r/IyEtPqp5fvI8Ij4Sb3f03VTT4chHNdf8XEZyeidvy1NwuHgwaKARIcMAnBUzHuEnrpNPBRJm6qdjAM7hIsx2r9uV3hXnI9kQWlujV8tysFw47/OL61E2N6k9KByyfbgE=
-Prime1: yW1v6UY+G4d6ZiEmfL6B6qnGGD95D7RGUEyRDH4cgholVLdGQAOkCA61j0nfT3gEK4RqQQSYO1pUU+QxHPw2JQ==
-Prime2: w7i53cqWr/8l11AmA+ofbLQHGXnciAq04vRF7BmLGDYEASQTrgsUE5P44gwmBFG1o4/8mlosAdK2y7QsfBDsaQ==
-Exponent1: Wefi/7g+mIML+vHo/9z4mAlXRhNusbfBeq3yQCU6DEgnSXzUelYlrQMDvwU2C36CPfpIguTOHg/fe+JqmYlpkQ==
-Exponent2: CD4XVcfaYL8WEONHNpL9j85lHiWLrA8HXyd6al8JBJQBxyqFyaadydVJffuU/kmSpLjDopx5jfoZyKpl1TPBQQ==
-Coefficient: nNpvU/xGtG0cmJDuS/A6ult7chDRUnDiFAdwokPUhupJW04i1zjF+H5aFdCEm80nMgR58fw06dxM9EHqvcQFUw==
+PrivateExponent: KWlNCmkYOln/7wi/MMEcTa54NBjnepnPjx5fUuKOEh6sdKI1JOSns6urNF+EJp/bDPMijErCHWiABt5Jx3E678ecOK2iP0OoK84inCXmpNmK6OTBvjc2EToJ2cYFvbYVxaIn+rJx+hCeto5UteSMksCDCAqD8mWS0oE8koAINRE=
+Prime1: 9AupeSX33rtcr8WJ198DK7H4qjVeHGTtuukQB90W3xMDrtWsXUV0/fpXaWdHNPDGqerKpABlAlpvk7JAMcRtLQ==
+Prime2: 8E6X34Qj73U2YHDDV7ANCabqu6o/y4xxAqNGyGmTENqgPg87xukxFikOcYTSPDGcdCTdT3Ak+nXfVzcXFLImVQ==
+Exponent1: 3h2/IYRtFUtyEIi57MANIrfYmxH3leBGftegv4d6SY4EzButxTZyRLaU2FondQevyPbpeFrjlEC7TLHvu1wMAQ==
+Exponent2: xD5qqI4xCoyeK4PrAuEyxH8bksYl8wRuBclxNJmDEHB6DDREjNxCyeYddXcSeTXKns68LPNYP3GjQoYqwyv5QQ==
+Coefficient: oLV/tUX4/s4YaVRnLzIN6xekaH+fmK28PcO8gSoigY4Ih8uaxVaIcyb5NZawAVXr+eE6JovZGsbnKk1oJ7GRWw==
 `
-var zskPubStr = "stakey.org.	14400 IN	DNSKEY	256 3 10 AwEAAZn/tSW46+aotoPFtOHQhKpca06HUAYV/XFhyBE6cv7DhsIHxCJdpqAIUlhdscGQxgM4o8JKR+2d7yShcRNbDDLRfxSYITdYt3jAIn//hQt1QLQtQMeI2tN9+nFVp6vsrj5VykBRSM+f5KpdnXApMI2qDsrIG4cgOYikKzazrFEt"
+var zskPubStr = "testnet-seed.stakey.org.	IN	DNSKEY	256 3 10 AwEAAeUV2zcrmU2EDs2DzBWzqD3ymZuhFbTJLos+9MTanaEnO4R0d4VM9kLuPB3hBjRsVvituWnCo8FkDvCOdaH66JVn4riq0dhXLXkIAn1XYSOd/mDUgMDePyDPzzFc2kopvg0zvb+XOH3mK+TZ7xubwc1ZLaO0r+/+F+ZrI9obtu3x"
 
 var kskPrivStr = `Private-key-format: v1.2
 Algorithm: 10 (RSASHA512)
-Modulus: xgDdxUYynJCaoXnl/CYSyDLj75jylFHpnxEAmROI11S1PpU+Q9MfRjFapE1fyiht5h6Jmq082PCQQ68qgttWgBllM9lUoe7v0VMLZ48EzLbpkN0QguEe2PVaLlFMMtcwmJSTOaQ9/BLNCrYCMwaUPfp99u9+zrLlyx5H1EoQC9s=
+Modulus: rVLnexmHWdxGkcG0lPpOOq0Wz3jCdOoYIabuuteW9dqItLFa3I1NvOTuthaCwERvRaJHGh8pJN3j253c+Y8S0veDb6ZFjb7FDI4oIhWmSQUZ0wQwU40qDsZsC7dsPwr9GhAIugtunTnQ+k/HbCxNE3miYBjZPrmoznNgl8kzdKU=
 PublicExponent: AQAB
-PrivateExponent: avw+1//1CtmrY4Ks/NBJp7ivpl96+x9DXzpdm1iNwOO5RsZ3LUifBltWgZ55Go87ynJHobbnQMTC/n9gNfJzyrEnSBfn3UWmM0QjrsTiDVRwOA4Onad63AOgF1A0EI6cTDkr2H+5wjjHyk7cPD3oHlMDEdHqwCsTJspRmqYPhNk=
-Prime1: 9jkX+q+X99d02k13R+DDBVRASfI6IPceLe5BV9b37Vvf97K/adC5DDYrPcokJX7b/tVXFc64CJhxc0/15nvxTQ==
-Prime2: zd2cP3YEhmZlWM2IdbEu14xNqMP2VbhqQwHdHGx7+vOBTfexg7WT6zJ0vp9Bx8VUfB1qnPqAA2FiRk+A7gjdxw==
-Exponent1: 7u5AYrd6lLqzXhPGKC3nkYhMSnWQCuVCl/eX2RF1zRNWpxsBvEEbEMqP84nwwaH1AbkspLDQzSaBEREK4fpsEQ==
-Exponent2: gXPYfAN/hvA+zJ+6Lp/zX7GnZ/eKII8tquMyIlyJfd2/ssKOCs+Uq3J3/SJyH+gTX1S0JPBUrUuAm8wEvCoxIw==
-Coefficient: BZtSnAn8xu0YHIe1Mw95vhD62eC9fKzyeW4UNCzCQQ5oYKcO58DXb8QTSbBAtfaE5pIO1elDKi7/EjeYJZsg/w==
+PrivateExponent: glOnaYHNq70ddzYfUjJQpoBGeaUFGyJ3GL7MHcREaAN17eC6QMMjpBjEgji1AluzC7o1Gqg5qNYMIrQ2V5TEgo7+TSPRnEbh42324Pl8fHaL/Hh97AVXzIID/KiCawdlpEnTr0H0z8csJRVSFRPLl3uJ00YCRbKTIbQxAzWk7DU=
+Prime1: 1DPoqd5PClbT+1nVtL4vUnIcjkuv08o5MjPGivHXgRVaBqgvDjEqZv+UIFEp+OX40BV+FFvIsqi6VMjOL1uqHw==
+Prime2: 0RjDCIY6FX8g+UdwVKOZvepVCbJZo1v4VXpx1kX9faGkKdsYesujynMJmBYqkIicIRK/DoDG5GHfD+yJAlvQuw==
+Exponent1: zqjTEQPpNCeFgQdnQgPqMD/joY0Cap9J/qM/27dVamgx6cPHN+oX4oFLcAG7f6PwIi6cQBV3Ks95z/JUIvkBfw==
+Exponent2: G5KKVVtt2VvUO0riUybnpRV7dTXhgBsmmg71Z+3+yUxBW4uapMapqI6W20lA/6IkBHB2ZTEyCPem9HCaeIcm9Q==
+Coefficient: q9RyLYzWlhSDGYPnsvb1cOHDuoWZzqh4pBJrq7eC0BF/713q31NmLWCnIH8FU41a44K3QQDg1aLEPZbN9YMziA==
 `
 
-var kskPubStr = "stakey.org.	14400 IN	DNSKEY	257 3 10 AwEAAcYA3cVGMpyQmqF55fwmEsgy4++Y8pRR6Z8RAJkTiNdUtT6VPkPTH0YxWqRNX8oobeYeiZqtPNjwkEOvKoLbVoAZZTPZVKHu79FTC2ePBMy26ZDdEILhHtj1Wi5RTDLXMJiUkzmkPfwSzQq2AjMGlD36ffbvfs6y5cseR9RKEAvb"
+var kskPubStr = "testnet-seed.stakey.org.	IN	DNSKEY	257 3 10 AwEAAa1S53sZh1ncRpHBtJT6TjqtFs94wnTqGCGm7rrXlvXaiLSxWtyNTbzk7rYWgsBEb0WiRxofKSTd49ud3PmPEtL3g2+mRY2+xQyOKCIVpkkFGdMEMFONKg7GbAu3bD8K/RoQCLoLbp050PpPx2wsTRN5omAY2T65qM5zYJfJM3Sl"
 
 var (
-	zsk  *SigningKey
-	ksk  *SigningKey
-	zone string
+	zsk           *SigningKey
+	ksk           *SigningKey
+	zone          string
+	keyStorageDir string
 )
 
 var (
@@ -115,12 +117,16 @@ func makeRRSIG(k *dns.DNSKEY) *dns.RRSIG {
 	return sig
 }
 
-func SignRRSet(rrSet []dns.RR) (*dns.RRSIG, error) {
+func SignRRSet(rrSet []dns.RR) ([]dns.RR, error) {
+
+	if rrSet == nil {
+		return rrSet, nil
+	}
 
 	// TODO should we raise an error if the RRset is empty,
 	// or just silently get over the fact and return nil
 	if len(rrSet) < 1 {
-		return nil, nil
+		return rrSet, nil
 	}
 
 	p := *zsk.PrivKey
@@ -129,10 +135,13 @@ func SignRRSet(rrSet []dns.RR) (*dns.RRSIG, error) {
 	err := sig.Sign(p.(*rsa.PrivateKey), rrSet)
 
 	if err != nil {
-		return nil, err
+		log.Printf("DNSSEC: cannot sign RR %v", err)
+		return rrSet, err
 	}
 
-	return sig, nil
+	rrSet = append(rrSet, sig)
+
+	return rrSet, nil
 }
 
 func getDNSKEY() (rrset []dns.RR) {
@@ -159,8 +168,9 @@ func GetSignedDNSKEY() ([]dns.RR, *dns.RRSIG, error) {
 	return rrSet, sig, nil
 }
 
-func Initialize() {
-	zone = "stakey.org."
+func Initialize(appDatadir string, hostname string) {
+	zone = hostname
+	keyStorageDir = appDatadir
 	zsk = loadZsk()
 	ksk = loadKsk()
 }

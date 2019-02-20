@@ -97,12 +97,9 @@ func (d *DNSServer) Start() {
 
 			aResponse := func(qtype uint16, atype string) {
 				respMsg.Ns = append(respMsg.Ns, authority)
-				rrSig, err := dnssec.SignRRSet([]dns.RR{authority})
+				respMsg.Ns, err = dnssec.SignRRSet(respMsg.Ns)
 				if err == nil {
 					log.Printf("unable to sign %s response", atype)
-				}
-				if rrSig != nil {
-					respMsg.Ns = append(respMsg.Ns, rrSig)
 				}
 				ips := amgr.GoodAddresses(qtype, wantedSF)
 				for _, ip := range ips {
@@ -119,35 +116,17 @@ func (d *DNSServer) Start() {
 				}
 
 				if respMsg.Answer != nil {
-					rrSig, err := dnssec.SignRRSet(respMsg.Answer)
+					respMsg.Answer, err = dnssec.SignRRSet(respMsg.Answer)
 					if err != nil {
-						log.Printf("%s: SignRRSet: %v", err)
+						log.Printf("DNSSEC: cannot sign %s RR: %v", atype, err)
 						return
 					}
-					respMsg.Answer = append(respMsg.Answer, rrSig)
 				}
 			}
 
 			var atype string
 			qtype := dnsMsg.Question[0].Qtype
 			switch qtype {
-			case dns.TypeSOA:
-				atype = "SOA"
-				soa := new(dns.SOA)
-				soa.Hdr = dns.RR_Header{"stakey.org.", dns.TypeSOA, dns.ClassINET, 14400, 0}
-				soa.Ns = "ns1.stakey.org."
-				soa.Mbox = "hostmaster.stakey.org."
-				soa.Serial = 1164162633
-				soa.Refresh = 3600
-				soa.Retry = 900
-				soa.Expire = 1209600
-				soa.Minttl = 86400
-				rrSig, err := dnssec.SignRRSet([]dns.RR{soa})
-				if err != nil {
-					return
-				}
-				respMsg.Answer = append(respMsg.Answer, soa, rrSig)
-
 			case dns.TypeA:
 				atype = "A"
 				aResponse(qtype, atype)
@@ -165,11 +144,8 @@ func (d *DNSServer) Start() {
 					log.Printf("%s: NewRR: %v", addr, err)
 					return
 				}
-				rrSig, err := dnssec.SignRRSet([]dns.RR{newRR})
-				if err != nil {
-					return
-				}
-				respMsg.Answer = append(respMsg.Answer, newRR, rrSig)
+				respMsg.Answer = append(respMsg.Answer, newRR)
+				respMsg.Answer, err = dnssec.SignRRSet(respMsg.Answer)
 
 			case dns.TypeDNSKEY:
 				atype = "DNSKEY"
@@ -178,6 +154,23 @@ func (d *DNSServer) Start() {
 					return
 				}
 				respMsg.Answer = append(respMsg.Answer, rrSet[0], rrSet[1], rrSig)
+
+			case dns.TypeSOA:
+				atype = "SOA"
+				soa := new(dns.SOA)
+				soa.Hdr = dns.RR_Header{d.hostname, dns.TypeSOA, dns.ClassINET, 14400, 0}
+				soa.Ns = "seed.stakey.org."
+				soa.Mbox = "hostmaster.stakey.org."
+				soa.Serial = 1164162633
+				soa.Refresh = 3600
+				soa.Retry = 900
+				soa.Expire = 1209600
+				soa.Minttl = 86400
+				respMsg.Answer = append(respMsg.Answer, soa)
+				respMsg.Answer, err = dnssec.SignRRSet(respMsg.Answer)
+				if err != nil {
+					return
+				}
 
 			case dns.TypeDS:
 

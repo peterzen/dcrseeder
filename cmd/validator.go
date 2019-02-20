@@ -71,15 +71,14 @@ func main() {
 
 	ips = make([]string, 0, 100)
 
-	hostname := "stakey.org."
+	hostname := "testnet-seed.stakey.org."
 	var err error
 
 	//conf = &dns.ClientConfig{
 	//	Ndots:   1,
 	//	Servers: []string{"localhost"},
-	//	Port:    "5453",
+	//	Port:    "5354",
 	//}
-	//conf, err = &dns.ClientConfig{["localhost"], "", "5453", 1, DefaultTimeout, 1, 1)
 	conf, err = dns.ClientConfigFromFile("resolv.conf")
 	if err != nil || conf == nil {
 		fmt.Printf("Cannot initialize the local resolver: %s\n", err)
@@ -98,8 +97,7 @@ func main() {
 
 func LookupIP(hostname string) (err error) {
 
-	zone := "stakey.org."
-	qname := dns.Fqdn(zone)
+	qname := dns.Fqdn(hostname)
 	fmt.Printf("fqdn %s\n", qname)
 
 	// get SOA
@@ -134,6 +132,8 @@ func LookupIP(hostname string) (err error) {
 		}
 	}
 
+	parentZone := "stakey.org."
+
 	// get DS record from parent
 	dnsMessage = &dns.Msg{
 		MsgHdr: dns.MsgHdr{
@@ -145,7 +145,7 @@ func LookupIP(hostname string) (err error) {
 	dnsClient = &dns.Client{
 		ReadTimeout: DefaultTimeout,
 	}
-	r, err = localQuery(qname, dns.TypeDS)
+	r, err = localQuery(parentZone, dns.TypeDS)
 	if err != nil || r == nil {
 		fmt.Printf("Cannot retrieve DS for %s: %s\n", qname, err)
 		return err
@@ -186,7 +186,7 @@ func LookupIP(hostname string) (err error) {
 		return err
 	}
 
-	chainOfTrust.dnskey = make([]dns.RR, 0, 2)
+	chainOfTrust.dnskey = make([]dns.RR, 0, len(r.Answer))
 
 	for _, ans := range r.Answer {
 		switch t := ans.(type) {
@@ -310,6 +310,10 @@ func LookupIP(hostname string) (err error) {
 
 	//if len(chainOfTrust.)
 
+	if len(chainOfTrust.ds) < 1 {
+		err := &Error{err: fmt.Sprintf("DS record does not exist on parent zone %s", parentZone)}
+		return err
+	}
 	//7218FDF70DA623B1F83C168CBD0807CE36832A579EF479DD47308C5F
 	ds := strings.ToUpper(validationKeys.ksk.ToDS(dns.SHA256).Digest)
 	parentDs := strings.ToUpper(chainOfTrust.ds[0].Digest)

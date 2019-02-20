@@ -136,7 +136,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	dnssec.Initialize()
+	dnssec.Initialize(defaultHomeDir, cfg.Host)
 
 	amgr, err = NewManager(defaultHomeDir)
 	if err != nil {
